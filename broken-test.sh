@@ -6,6 +6,7 @@ echo "Test"
 # Erreur : if sans fi
 if [ -f test.txt ]; then
     echo "Fichier existe"
-# fi manquant !
+fi 
+
 
 echo "Fin"
