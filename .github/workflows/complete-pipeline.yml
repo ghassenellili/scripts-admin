@@ -9,7 +9,7 @@ on:
 
 env:
   RELEASE_NAME: scripts-admin
-  SCRIPTS_DIR: .
+  SCRIPTS_DIR: ./
 
 jobs:
   syntax-check:
