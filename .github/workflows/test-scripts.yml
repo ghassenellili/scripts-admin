@@ -1,0 +1,54 @@
+name: Test Scripts Bash
+
+# Déclencher le workflow à chaque push ou pull request
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-bash-scripts:
+    name: Vérifier les scripts Bash
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Étape 1 : Récupérer le code
+      - name: Checkout du code
+        uses: actions/checkout@v3
+      
+      # Étape 2 : Afficher les fichiers
+      - name: Lister les fichiers
+        run: ls -la
+      
+      # Étape 3 : Vérifier la syntaxe des scripts
+      - name: Vérifier la syntaxe Bash
+        run: |
+          echo "🔍 Vérification de la syntaxe des scripts..."
+          for script in *.sh; do
+            if [ -f "$script" ]; then
+              echo "Vérification de $script..."
+              bash -n "$script"
+              if [ $? -eq 0 ]; then
+                echo "✅ $script : syntaxe correcte"
+              else
+                echo "❌ $script : erreur de syntaxe"
+                exit 1
+              fi
+            fi
+          done
+          echo "✅ Tous les scripts sont valides !"
+      
+      # Étape 4 : Vérifier les permissions
+      - name: Vérifier les permissions
+        run: |
+          echo "🔍 Vérification des permissions..."
+          for script in *.sh; do
+            if [ -f "$script" ]; then
+              if [ -x "$script" ]; then
+                echo "✅ $script : exécutable"
+              else
+                echo "⚠️  $script : pas exécutable"
+              fi
+            fi
+          done
