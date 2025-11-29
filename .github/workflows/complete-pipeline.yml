@@ -1,0 +1,233 @@
+name: Pipeline CI/CD Complet
+
+# Déclencheurs
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Permet de déclencher manuellement
+
+# Variables d'environnement globales
+env:
+  RELEASE_NAME: scripts-admin
+  SCRIPTS_DIR: .
+
+jobs:
+  # ========================================
+  # JOB 1 : TESTS DE SYNTAXE
+  # ========================================
+  syntax-check:
+    name: 🔍 Vérification de la syntaxe
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+      
+      - name: Afficher les informations
+        run: |
+          echo "📊 Informations du build"
+          echo "========================"
+          echo "Branche : ${{ github.ref }}"
+          echo "Commit : ${{ github.sha }}"
+          echo "Auteur : ${{ github.actor }}"
+          echo "========================"
+      
+      - name: Lister les fichiers
+        run: |
+          echo "📁 Fichiers dans le dépôt :"
+          ls -lah
+      
+      - name: Tester la syntaxe Bash
+        run: |
+          echo "🔍 PHASE 1 : Vérification de la syntaxe"
+          echo "========================================"
+          
+          # Compteurs
+          total=0
+          success=0
+          failed=0
+          
+          # Parcourir tous les scripts .sh
+          for script in *.sh; do
+            if [ -f "$script" ]; then
+              total=$((total + 1))
+              echo ""
+              echo "📄 Test de : $script"
+              
+              # Vérifier la syntaxe avec bash -n
+              if bash -n "$script" 2>&1; then
+                echo "✅ $script : Syntaxe correcte"
+                success=$((success + 1))
+              else
+                echo "❌ $script : ERREUR DE SYNTAXE"
+                failed=$((failed + 1))
+              fi
+            fi
+          done
+          
+          # Résumé
+          echo ""
+          echo "========================================"
+          echo "📊 RÉSUMÉ DES TESTS DE SYNTAXE"
+          echo "========================================"
+          echo "Total de scripts testés : $total"
+          echo "✅ Réussis : $success"
+          echo "❌ Échoués : $failed"
+          echo "========================================"
+          
+          # Échouer si au moins un script a une erreur
+          if [ $failed -gt 0 ]; then
+            echo "❌ Des erreurs de syntaxe ont été détectées !"
+            exit 1
+          fi
+          
+          echo "✅ Tous les scripts ont une syntaxe correcte !"
+
+  # ========================================
+  # JOB 2 : VÉRIFICATION DES PERMISSIONS
+  # ========================================
+  permissions-check:
+    name: 🔐 Vérification des permissions
+    runs-on: ubuntu-latest
+    needs: syntax-check  # Attend que syntax-check soit terminé
+    
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+      
+      - name: Vérifier les permissions exécutables
+        run: |
+          echo "🔐 PHASE 2 : Vérification des permissions"
+          echo "=========================================="
+          
+          # Compteurs
+          total=0
+          executable=0
+          not_executable=0
+          
+          # Parcourir tous les scripts .sh
+          for script in *.sh; do
+            if [ -f "$script" ]; then
+              total=$((total + 1))
+              
+              if [ -x "$script" ]; then
+                echo "✅ $script : exécutable"
+                executable=$((executable + 1))
+              else
+                echo "⚠️  $script : NON exécutable"
+                not_executable=$((not_executable + 1))
+              fi
+            fi
+          done
+          
+          # Résumé
+          echo ""
+          echo "=========================================="
+          echo "📊 RÉSUMÉ DES PERMISSIONS"
+          echo "=========================================="
+          echo "Total de scripts : $total"
+          echo "✅ Exécutables : $executable"
+          echo "⚠️  Non exécutables : $not_executable"
+          echo "=========================================="
+          
+          # Warning mais pas d'échec (car on peut rendre exécutable après)
+          if [ $not_executable -gt 0 ]; then
+            echo "⚠️  Attention : Certains scripts ne sont pas exécutables"
+            echo "💡 Conseil : Utilisez 'chmod +x *.sh' pour les rendre exécutables"
+          else
+            echo "✅ Tous les scripts sont exécutables !"
+          fi
+
+  # ========================================
+  # JOB 3 : TESTS UNITAIRES
+  # ========================================
+  unit-tests:
+    name: 🧪 Tests unitaires
+    runs-on: ubuntu-latest
+    needs: [syntax-check, permissions-check]
+    
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+      
+      - name: Préparer l'environnement de test
+        run: |
+          echo "🧪 PHASE 3 : Tests unitaires"
+          echo "=========================================="
+          
+          # Créer un environnement de test
+          mkdir -p test-env
+          cd test-env
+          
+          # Créer des fichiers de test
+          echo "Contenu de test" > test-file.txt
+          echo "Log de test" > test.log
+          mkdir -p test-backup
+          
+          echo "✅ Environnement de test créé"
+      
+      - name: Test 1 - Vérifier que les scripts sont lisibles
+        run: |
+          echo ""
+          echo "📋 Test 1 : Lisibilité des scripts"
+          for script in *.sh; do
+            if [ -f "$script" ]; then
+              if [ -r "$script" ]; then
+                echo "✅ $script est lisible"
+              else
+                echo "❌ $script n'est pas lisible"
+                exit 1
+              fi
+            fi
+          done
+      
+      - name: Test 2 - Vérifier la présence du shebang
+        run: |
+          echo ""
+          echo "📋 Test 2 : Présence du shebang (#!/bin/bash)"
+          
+          failed=0
+          for script in *.sh; do
+            if [ -f "$script" ]; then
+              first_line=$(head -n 1 "$script")
+              if [[ "$first_line" == "#!/bin/bash"* ]]; then
+                echo "✅ $script : shebang présent"
+              else
+                echo "❌ $script : shebang manquant ou incorrect"
+                echo "   Première ligne : $first_line"
+                failed=1
+              fi
+            fi
+          done
+          
+          if [ $failed -eq 1 ]; then
+            echo "⚠️  Certains scripts n'ont pas de shebang correct"
+            # Ne pas échouer pour ce test (juste un warning)
+          fi
+      
+      - name: Test 3 - Vérifier l'absence de commandes dangereuses
+        run: |
+          echo ""
+          echo "📋 Test 3 : Détection de commandes dangereuses"
+          
+          dangerous_found=0
+          # Liste de commandes potentiellement dangereuses
+          dangerous_cmds=("rm -rf /" "dd if=" "mkfs" ":(){ :|:& };:")
+          
+          for script in *.sh; do
+            if [ -f "$script" ]; then
+              for cmd in "${dangerous_cmds[@]}"; do
+                if grep -q "$cmd" "$script" 2>/dev/null; then
+                  echo "⚠️  $script contient une commande dangereuse : $cmd"
+                  dangerous_found=1
+                fi
+              done
+            fi
+          done
+          
+          if [ $dangerous_found -eq 0 ]; then
+            echo "✅ Aucune commande dangereuse détectée"
+          else
+            echo "⚠️  Commandes dangereuses détectées (vérifiez manu
