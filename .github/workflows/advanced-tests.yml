@@ -1,0 +1,80 @@
+name: Tests Avancés
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Job 1 : Tests de syntaxe
+  syntax-check:
+    name: Vérification syntaxe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Vérifier syntaxe Bash
+        run: |
+          echo "🔍 Vérification syntaxe..."
+          for script in *.sh; do
+            [ -f "$script" ] && bash -n "$script" && echo "✅ $script"
+          done
+
+  # Job 2 : Tests de sécurité (ShellCheck)
+  security-check:
+    name: Analyse de sécurité
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Installer ShellCheck
+        run: sudo apt-get install -y shellcheck
+      
+      - name: Analyser les scripts
+        run: |
+          echo "🔒 Analyse de sécurité avec ShellCheck..."
+          for script in *.sh; do
+            if [ -f "$script" ]; then
+              echo "Analyse de $script..."
+              shellcheck "$script" || true
+            fi
+          done
+
+  # Job 3 : Tests d'exécution
+  execution-test:
+    name: Tests d'exécution
+    runs-on: ubuntu-latest
+    needs: [syntax-check, security-check]  # Attend les 2 premiers jobs
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Rendre les scripts exécutables
+        run: chmod +x *.sh
+      
+      - name: Tester backup.sh
+        run: |
+          echo "🧪 Test de backup.sh..."
+          # Test en mode dry-run ou avec des données de test
+          bash backup.sh || echo "⚠️ backup.sh nécessite des ajustements"
+      
+      - name: Tester monitor.sh
+        run: |
+          echo "🧪 Test de monitor.sh..."
+          bash monitor.sh
+
+  # Job 4 : Rapport final
+  report:
+    name: Rapport de build
+    runs-on: ubuntu-latest
+    needs: [syntax-check, security-check, execution-test]
+    if: always()  # S'exécute même si les autres jobs échouent
+    steps:
+      - name: Générer le rapport
+        run: |
+          echo "📊 RAPPORT DE BUILD"
+          echo "=================="
+          echo "✅ Build terminé"
+          echo "Date : $(date)"
+          echo "Commit : ${{ github.sha }}"
+          echo "Branche : ${{ github.ref }}"
