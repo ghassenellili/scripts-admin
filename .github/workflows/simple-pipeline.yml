@@ -1,0 +1,40 @@
+name: Pipeline Simple
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-and-release:
+    name: Tests et Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Test syntaxe
+        run: |
+          echo "🔍 Test de syntaxe"
+          for script in *.sh; do
+            [ -f "$script" ] && bash -n "$script" && echo "✅ $script"
+          done
+      
+      - name: Créer release
+        run: |
+          echo "📦 Création de la release"
+          mkdir release
+          cp *.sh release/ 2>/dev/null || true
+          cp README.md release/ 2>/dev/null || true
+          tar -czf scripts-admin-$(date +%Y%m%d).tar.gz release/
+          echo "✅ Release créée"
+      
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: scripts-release
+          path: "*.tar.gz"
+      
+      - name: Succès
+        run: echo "🎉 Pipeline terminé avec succès !"
