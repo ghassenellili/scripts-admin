@@ -1,11 +1,10 @@
 #!/bin/bash
-# Script avec erreur volontaire
+# Script  corigé
 
 echo "Début du script"
 
-# Erreur : if sans fi
 if [ -f test.txt ]; then
     echo "Le fichier existe"
-# fi manquant !
+fi
 
 echo "Fin du script"
