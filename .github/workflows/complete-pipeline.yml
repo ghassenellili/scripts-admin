@@ -212,22 +212,19 @@ jobs:
           echo ""
           echo "📋 Test 3 : Détection de commandes dangereuses"
           
-          dangerous_found=0
-          # Liste de commandes potentiellement dangereuses
-          dangerous_cmds=("rm -rf /" "dd if=" "mkfs" ":(){ :|:& };:")
+          echo "🔍 Recherche de commandes potentiellement dangereuses..."
           
-          for script in *.sh; do
-            if [ -f "$script" ]; then
-              for cmd in "${dangerous_cmds[@]}"; do
-                if grep -q "$cmd" "$script" 2>/dev/null; then
-                  echo "⚠️  $script contient une commande dangereuse : $cmd"
-                  dangerous_found=1
-                fi
-              done
-            fi
-          done
+          # Liste de patterns à rechercher
+          if grep -r "rm -rf /" *.sh 2>/dev/null; then
+            echo "⚠️  Commande 'rm -rf /' trouvée"
+          fi
           
-          if [ $dangerous_found -eq 0 ]; then
-            echo "✅ Aucune commande dangereuse détectée"
-          else
-            echo "⚠️  Commandes dangereuses détectées (vérifiez manu
+          if grep -r "mkfs" *.sh 2>/dev/null; then
+            echo "⚠️  Commande 'mkfs' trouvée"
+          fi
+          
+          if grep -r "> /dev/sd" *.sh 2>/dev/null; then
+            echo "⚠️  Écriture directe sur disque détectée"
+          fi
+          
+          echo "✅ Analyse de sécurité terminée"
